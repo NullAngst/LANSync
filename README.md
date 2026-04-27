@@ -65,7 +65,7 @@ installer on Windows and macOS. On Debian/Ubuntu you may need
 python3-tkinter`.
 
 ```bash
-git clone https://github.com/yourname/lansync
+git clone https://github.com/NullAngst/lansync
 cd lansync
 pip install -e .[tls]
 ```
