@@ -11,33 +11,33 @@ Windows** (and macOS, in either direction).
 
 ## Features
 
-- **Single launchable app on both machines.** No need to install or
+* **Single launchable app on both machines.** No need to install or
   configure SSH, SMB, FTP, or rsync. One Python program on each side.
-- **Key-based pairing.** On first launch each machine generates a random
+* **Key-based pairing.** On first launch each machine generates a random
   pairing key. The destination shows its key; the source enters that key
   plus the destination's IP. Authentication is HMAC-SHA256 challenge/
   response — the key is never sent on the wire.
-- **TLS on the LAN.** Connections are encrypted with a self-signed
+* **TLS on the LAN.** Connections are encrypted with a self-signed
   certificate generated on first launch. Falls back to plaintext if the
   optional `cryptography` package is missing.
-- **Named backups, exportable as JSON.** Save many configurations
+* **Named backups, exportable as JSON.** Save many configurations
   ("Movies → NAS", "Documents → Laptop"). Export a config as a single
   JSON file you can import on another install.
-- **Per-mapping options.**
-  - **Delete extraneous:** off by default. Turn it on for a folder where
+* **Per-mapping options.**
+  * **Delete extraneous:** off by default. Turn it on for a folder where
     you want a strict mirror — replace a CD on source, the old files
     disappear from destination on the next sync. Leave it off for a
     folder where you sweep the source regularly but want destination to
     keep accumulating.
-  - **Filename sanitization:** off / sanitize-on-copy / rename-source-too.
+  * **Filename sanitization:** off / sanitize-on-copy / rename-source-too.
     Use the rename mode if you want a strict 1:1 mirror including
     filenames; use copy mode if your Linux source has Windows-illegal
     characters that you'd rather not rewrite.
-- **Transfer settings.** Parallel file uploads, total-bandwidth cap in
+* **Transfer settings.** Parallel file uploads, total-bandwidth cap in
   KB/s, network chunk size, optional SHA-256 verification, custom port.
-- **Idempotent.** Re-running a backup only sends files that are new or
+* **Idempotent.** Re-running a backup only sends files that are new or
   whose size or mtime differ.
-- **Cross-platform paths.** Forward slashes are used on the wire and
+* **Cross-platform paths.** Forward slashes are used on the wire and
   resolved natively on each side, so `/mnt/media/movies → E:/backups/
   movies` works regardless of which side is which OS.
 
@@ -74,6 +74,37 @@ The `[tls]` extra installs `cryptography` for TLS. You can omit it and
 LANSync will still work in plaintext mode (fine on a trusted LAN, but the
 GUI will warn you).
 
+## Building Standalone Executables
+
+If you prefer to run LANSync as a standalone application without requiring Python or a virtual environment on the target machine, you can compile it using PyInstaller. 
+
+**Note on Cross-Compiling:** You cannot cross-compile these binaries. To get a Windows `.exe`, you must run the build process on a Windows machine. To get a Linux binary, you must build on Linux.
+
+First, ensure you have installed the project and PyInstaller:
+```bash
+pip install -e .[tls]
+pip install pyinstaller
+```
+
+### Linux
+Run the following command from the root of the repository:
+```bash
+pyinstaller --onefile --noconsole --name lansync lansync/__main__.py
+```
+Your compiled, ready-to-run Linux binary will be located in the newly created `dist/` directory.
+
+### Windows
+1. Install Python from the official website. **Important:** Check the box that says "Add python.exe to PATH" during installation.
+2. Open PowerShell in the root of the repository and run:
+```powershell
+python -m venv venv
+.\venv\Scripts\activate
+pip install -e .
+pip install pyinstaller
+pyinstaller --onefile --noconsole --name lansync lansync\__main__.py
+```
+Your standalone `lansync.exe` will be located in the `dist\` directory.
+
 ## Quickstart
 
 ### On the destination machine
@@ -90,10 +121,10 @@ GUI will warn you).
 1. Run `lansync`.
 2. Click **New** in the sidebar to create a backup.
 3. Fill in:
-   - **Name:** something descriptive — `Movies → Backup PC`.
-   - **Role:** `source`.
-   - **Peer IP:** the destination's LAN IP.
-   - **Peer key:** the key you copied from the destination.
+   * **Name:** something descriptive — `Movies → Backup PC`.
+   * **Role:** `source`.
+   * **Peer IP:** the destination's LAN IP.
+   * **Peer key:** the key you copied from the destination.
 4. Click **Add folder…**, pick `/mnt/media/movies` on the source.
 5. In the dialog, set the **Destination folder** to where it should land
    on the other machine — `E:/backups/movies` if the destination is
@@ -103,10 +134,10 @@ GUI will warn you).
 
 ### Reusing the configuration
 
-- Click **Export…** to write the backup to a JSON file.
-- On any other machine, click **Import…** and pick that file. All
+* Click **Export…** to write the backup to a JSON file.
+* On any other machine, click **Import…** and pick that file. All
   settings carry over, including peer IP and key.
-- For unattended runs (cron / Task Scheduler):
+* For unattended runs (cron / Task Scheduler):
 
 ```bash
 lansync run /path/to/movies-backup.json
@@ -121,12 +152,12 @@ that fail to land on a Windows destination.
 
 Each mapping picks one of three behaviors:
 
-- **Off** — copy filenames byte-for-byte. Fastest, but may fail on
+* **Off** — copy filenames byte-for-byte. Fastest, but may fail on
   Windows.
-- **Sanitize copy only** *(default)* — destination receives a sanitized
+* **Sanitize copy only** *(default)* — destination receives a sanitized
   name; the source file is untouched. The `Movie: The Best?.mkv` on
   Linux becomes `Movie_ The Best_.mkv` on Windows.
-- **Rename source too** — sanitize the source file in place before
+* **Rename source too** — sanitize the source file in place before
   copying, so source and destination stay 1:1. Useful if you want a
   strict mirror you can later sync back the other way.
 
@@ -156,13 +187,13 @@ folder you sweep on the source while the destination keeps everything.
 
 ## Security
 
-- The pairing key is the only authentication credential. Keep it off
+* The pairing key is the only authentication credential. Keep it off
   shared chat. Regenerate it from the header bar if it leaks; every
   machine that pushes to this one will then need the new key.
-- The destination confines all writes under the configured destination
+* The destination confines all writes under the configured destination
   paths. Path-traversal attempts (`../etc/...`) are rejected before
   reaching disk.
-- TLS with a self-signed cert protects the wire. Certificate identity is
+* TLS with a self-signed cert protects the wire. Certificate identity is
   not used for authentication — the HMAC handshake is. This is the
   right tradeoff for ad-hoc LAN sync but it does mean an attacker on the
   same network with the pairing key could connect.
