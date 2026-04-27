@@ -1,8 +1,0 @@
-# Core requirements: none — LANSync runs on stdlib alone (Tkinter is bundled
-# with the standard CPython installer on Windows and macOS, and packaged as
-# python3-tk on Debian/Ubuntu, tk on Arch/Fedora).
-#
-# Optional: TLS encryption between source and destination uses
-# self-signed certificates. If you skip this dependency LANSync will fall
-# back to plaintext sockets on the LAN.
-cryptography>=41.0
