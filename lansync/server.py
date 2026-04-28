@@ -9,6 +9,7 @@ Multiple sources may connect concurrently; each gets a worker thread.
 """
 from __future__ import annotations
 
+import json
 import os
 import socket
 import ssl
@@ -194,7 +195,11 @@ class DestinationServer:
                         entries.append({"rel": rel, "size": 0, "mtime": 0, "is_dir": True})
                     except OSError:
                         pass
-        proto.send_message(conn, {"op": "LIST_OK", "entries": entries})
+        # Entries are serialized as the payload, not in the JSON header.
+        # This avoids the 1 MiB header cap when directories contain tens of
+        # thousands of files. The payload cap is effectively unlimited (1 TiB).
+        payload = json.dumps(entries, separators=(",", ":")).encode("utf-8")
+        proto.send_message(conn, {"op": "LIST_OK"}, payload=payload)
 
     def _h_mkdir(self, conn, hdr, _payload):
         target = self._resolve_under_root(hdr["root"], hdr["rel"])
