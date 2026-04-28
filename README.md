@@ -25,7 +25,7 @@ Windows** (and macOS, in either direction).
   JSON file you can import on another install.
 * **Per-mapping options.**
   * **Delete extraneous:** off by default. Turn it on for a folder where
-    you want a strict mirror — replace a CD on source, the old files
+    you want a strict mirror — replace a file on source, the old files
     disappear from destination on the next sync. Leave it off for a
     folder where you sweep the source regularly but want destination to
     keep accumulating.
@@ -38,8 +38,8 @@ Windows** (and macOS, in either direction).
 * **Idempotent.** Re-running a backup only sends files that are new or
   whose size or mtime differ.
 * **Cross-platform paths.** Forward slashes are used on the wire and
-  resolved natively on each side, so `/mnt/media/movies → E:/backups/
-  movies` works regardless of which side is which OS.
+  resolved natively on each side, so `/mnt/media/movies → E:/backups/movies`
+  works regardless of which side is which OS.
 
 ## How it maps to the problem
 
@@ -59,15 +59,66 @@ Windows** (and macOS, in either direction).
 
 ## Installation
 
-Requires Python 3.10 or newer. Tkinter ships with the standard CPython
-installer on Windows and macOS. On Debian/Ubuntu you may need
-`sudo apt install python3-tk`. On Fedora it's `sudo dnf install
-python3-tkinter`.
+Requires Python 3.10 or newer.
+
+* **Windows / macOS:** Tkinter ships with the standard CPython installer.
+* **Debian / Ubuntu:** `sudo apt install python3-tk python3-venv`
+* **Fedora:** `sudo dnf install python3-tkinter`
+* **openSUSE:** `sudo zypper install python3-tk python3-venv`
+
+### Linux
+
+Modern Linux distributions (Fedora, openSUSE, Arch, recent Ubuntu/Debian)
+mark the system Python environment as externally managed and will refuse
+a bare `pip install`. You must use a virtual environment.
 
 ```bash
 git clone https://github.com/NullAngst/lansync
 cd lansync
+
+# Create and activate a virtual environment
+python3 -m venv .venv
+source .venv/bin/activate
+
+# Install with TLS support
 pip install -e .[tls]
+
+# Launch
+lansync
+```
+
+The `source .venv/bin/activate` step must be repeated in each new terminal
+session, or you can invoke the interpreter directly without activating:
+
+```bash
+.venv/bin/lansync
+# or
+.venv/bin/python -m lansync
+```
+
+To deactivate the virtual environment when you are done:
+
+```bash
+deactivate
+```
+
+### Windows
+
+```powershell
+git clone https://github.com/NullAngst/lansync
+cd lansync
+pip install -e .[tls]
+```
+
+### macOS
+
+```bash
+git clone https://github.com/NullAngst/lansync
+cd lansync
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e .[tls]
+lansync
 ```
 
 The `[tls]` extra installs `cryptography` for TLS. You can omit it and
@@ -76,41 +127,60 @@ GUI will warn you).
 
 ## Building Standalone Executables
 
-If you prefer to run LANSync as a standalone application without requiring Python or a virtual environment on the target machine, you can compile it using PyInstaller. 
+If you prefer to run LANSync without requiring Python on the target machine,
+you can compile it using PyInstaller.
 
-**Note on Cross-Compiling:** You cannot cross-compile these binaries. To get a Windows `.exe`, you must run the build process on a Windows machine. To get a Linux binary, you must build on Linux.
-
-First, ensure you have installed the project and PyInstaller:
-```bash
-pip install -e .[tls]
-pip install pyinstaller
-```
+**Note on cross-compiling:** You cannot cross-compile these binaries. To
+get a Windows `.exe` you must run the build on Windows. To get a Linux
+binary you must build on Linux.
 
 ### Linux
-Run the following command from the root of the repository:
+
 ```bash
-pyinstaller --onefile --noconsole --name lansync lansync/__main__.py
+# Activate your virtual environment first
+source .venv/bin/activate
+
+pip install pyinstaller
+pyinstaller --onefile --noconsole --collect-all lansync --name lansync lansync/__main__.py
 ```
-Your compiled, ready-to-run Linux binary will be located in the newly created `dist/` directory.
+
+The compiled binary will be at `dist/lansync`.
 
 ### Windows
-1. Install Python from the official website. **Important:** Check the box that says "Add python.exe to PATH" during installation.
+
+1. Install Python from python.org. Check **"Add python.exe to PATH"** during
+   installation.
 2. Open PowerShell in the root of the repository and run:
+
 ```powershell
 python -m venv venv
 .\venv\Scripts\activate
-pip install -e .
+pip install -e .[tls]
 pip install pyinstaller
-pyinstaller --onefile --noconsole --name lansync lansync\__main__.py
+pyinstaller --onefile --noconsole --collect-all lansync --name lansync lansync\__main__.py
 ```
-Your standalone `lansync.exe` will be located in the `dist\` directory.
+
+The standalone `lansync.exe` will be at `dist\lansync.exe`.
+
+> **Note:** If you see `Failed to execute script '__main__' due to unhandled
+> exception: attempted relative import with no known parent package` when
+> running the compiled executable, ensure your `lansync/__main__.py` uses an
+> absolute import inside the `if __name__ == "__main__"` guard:
+>
+> ```python
+> import sys
+>
+> if __name__ == "__main__":
+>     from lansync.cli import main
+>     sys.exit(main())
+> ```
 
 ## Quickstart
 
 ### On the destination machine
 
 1. Run `lansync` (or `python -m lansync`).
-2. In the header you'll see a long random pairing key. Click **Copy**.
+2. In the header you will see a long random pairing key. Click **Copy**.
 3. Note the machine's LAN IP (`ip a` on Linux, `ipconfig` on Windows).
 4. Click **Start** next to "Destination listener". The state goes to
    *Running*. The destination is now waiting for incoming sync sessions
@@ -128,7 +198,7 @@ Your standalone `lansync.exe` will be located in the `dist\` directory.
 4. Click **Add folder…**, pick `/mnt/media/movies` on the source.
 5. In the dialog, set the **Destination folder** to where it should land
    on the other machine — `E:/backups/movies` if the destination is
-   Windows, `/mnt/backup/movies` if it's Linux. Choose your delete and
+   Windows, `/mnt/backup/movies` if it is Linux. Choose your delete and
    sanitize options. Save.
 6. Click **Save** in the editor, then **Run sync**.
 
@@ -152,11 +222,10 @@ that fail to land on a Windows destination.
 
 Each mapping picks one of three behaviors:
 
-* **Off** — copy filenames byte-for-byte. Fastest, but may fail on
-  Windows.
+* **Off** — copy filenames byte-for-byte. Fastest, but may fail on Windows.
 * **Sanitize copy only** *(default)* — destination receives a sanitized
-  name; the source file is untouched. The `Movie: The Best?.mkv` on
-  Linux becomes `Movie_ The Best_.mkv` on Windows.
+  name; the source file is untouched. `Movie: The Best?.mkv` on Linux
+  becomes `Movie_ The Best_.mkv` on Windows.
 * **Rename source too** — sanitize the source file in place before
   copying, so source and destination stay 1:1. Useful if you want a
   strict mirror you can later sync back the other way.
@@ -180,7 +249,7 @@ folder you sweep on the source while the destination keeps everything.
 |---|---|
 | Parallel files | Workers that upload files simultaneously. Each opens its own authenticated connection. |
 | Speed limit (KB/s) | Total cap shared across all workers, via a token bucket. `0` = unlimited. |
-| Chunk (KB) | Size of each socket read/write. Bigger → less syscall overhead but coarser rate-limit granularity. |
+| Chunk (KB) | Size of each socket read/write. Bigger means less syscall overhead but coarser rate-limit granularity. |
 | Verify SHA-256 | Source hashes the file before sending; destination re-hashes after writing. Mismatch rejects the upload. |
 | Use TLS | Wrap the TCP socket in TLS. Required if the LAN is not fully trusted. |
 | Port | Default 50515. Both ends must agree. |
@@ -195,8 +264,8 @@ folder you sweep on the source while the destination keeps everything.
   reaching disk.
 * TLS with a self-signed cert protects the wire. Certificate identity is
   not used for authentication — the HMAC handshake is. This is the
-  right tradeoff for ad-hoc LAN sync but it does mean an attacker on the
-  same network with the pairing key could connect.
+  right tradeoff for ad-hoc LAN sync, but it does mean an attacker on the
+  same network who also has the pairing key could connect.
 
 ## Command-line reference
 
@@ -231,6 +300,7 @@ tests/
 ## Running the tests
 
 ```bash
+# With your virtual environment active:
 python tests/test_e2e.py
 ```
 
