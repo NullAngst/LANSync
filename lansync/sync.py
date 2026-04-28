@@ -16,6 +16,7 @@ mapping:
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 import socket
 import ssl
@@ -243,13 +244,18 @@ class SyncEngine:
             self.log(f"WARNING: sanitization collision: '{a}' and '{b}' both map to '{d}'")
 
         # Ask destination for its current state.
+        # Entries are returned as a JSON payload, not in the header, so that
+        # directories with tens of thousands of files don't hit the 1 MiB
+        # header cap.
         ctrl = connections[0]
-        hdr, _ = ctrl.request({"op": "LIST", "root": mapping.dest_path})
-        if hdr.get("op") != "LIST_OK":
-            raise RuntimeError(f"LIST failed: {hdr}")
+        reply, payload = ctrl.request({"op": "LIST", "root": mapping.dest_path})
+        if reply.get("op") != "LIST_OK":
+            raise RuntimeError(f"LIST failed: {reply}")
+        raw_entries = json.loads(payload.decode("utf-8")) if payload else []
+
         dest_index: Dict[str, FileEntry] = {}
         dest_dir_set = set()
-        for e in hdr.get("entries", []):
+        for e in raw_entries:
             if e.get("is_dir"):
                 dest_dir_set.add(e["rel"])
             else:
